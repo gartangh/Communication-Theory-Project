@@ -93,30 +93,49 @@ classdef Quantization
             % baseer je voor alle berekeningen op de anonieme functie distr.
             [~, distr] = make_probability_functions(Quantization.filename);
             M = 8;
-            EPS = 1e-4;
+            EPS = 1e-9;
             
-            q = rand(M,1);
-            r = zeros(M-1,1);
+            r = zeros(1,M+1);
+            q = [255/(2*M) : 255/M : 255-255/(2*M)]; % optimale uniforme met bereik 0..255
             l = 1;
-            sigma_e_sqr = [];
-            while (l<=2 || ((sigma_e_sqr(l-2) - sigma_e_sqr(l-1))/(sigma_e_sqr(l-2)) >= EPS))
-                r = (q(1:M-1) + q(2:M))/2;
-                q(1) = integral(@(u) distr(u).*u, 0, r(1))/integral(@(u) distr(u), 0, r(1));
-                q(M) = integral(@(u) distr(u).*u, r(M-1), 255)/integral(@(u) distr(u), r(M-1), 255);
-                for i = 2:M-1
-                    q(i) = integral(@(u) distr(u).*u, r(i-1), r(i))/integral(@(u) distr(u), r(i-1), r(i));
+            r(1) = 0;
+            r(M+1) = 255;
+            prev_distortion = 0;
+            cur_distortion = 0;
+            all_distortions = [];
+            while true
+                
+                for i = 1:M-1 % update alle kwantisatiedrempels
+                    r(i+1) = (q(i) + q(i+1))/2;
                 end
-                sigma_e_sqr = [sigma_e_sqr; 0];
-                sigma_e_sqr(l) = sigma_e_sqr(l) + integral(@(u) (u-q(i)).^2.*distr(u), 0, r(1));
-                sigma_e_sqr(l) = sigma_e_sqr(l) + integral(@(u) (u-q(i)).^2.*distr(u), r(M-1), 255);
-
-                for i = 2:M-1
-                    sigma_e_sqr(l) = sigma_e_sqr(l) + integral(@(u) (u-q(i)).^2.*distr(u), r(i-1), r(i));
+                
+                for i = 1:M % update alle kwantisatieniveaus
+                    teller = integral(@(u) u.*distr(u), r(i), r(i+1));
+                    noemer = integral(@(u) distr(u), r(i), r(i+1));
+                    if noemer~=0 
+                        q(i) = teller/noemer;
+                    end
                 end
-                l = l+1;
+                prev_distortion = cur_distortion;
+                cur_distortion = 0;
+                for i = 1:M 
+                    cur_distortion = cur_distortion + integral(@(u) (q(i) - u).^2.*distr(u), r(i), r(i+1));
+                end
+                all_distortions = [all_distortions cur_distortion];
+                if l>1 && (prev_distortion - cur_distortion)/prev_distortion < EPS
+                    break
+                end
+                l = l + 1;
             end
-            plot(sigma_e_sqr);
-            GKD = sigma_e_sqr(l-1);            
+            
+            plot(1:l, all_distortions);
+            
+            GKD = cur_distortion;
+            gem=integral(@(u) u.*distr(u), 0, 255);
+            var=integral(@(u) distr(u).*(u-gem).^2, 0, 255);
+            SQR = 10*log10(var/GKD);
+            p =  distr(q);
+            entropie =  -sum(p .* log2(p));
         end
         
         % Functie om de compansie kwantisator te bepalen
