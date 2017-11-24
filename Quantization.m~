@@ -188,15 +188,10 @@ classdef Quantization
             samples_quantized = ones(size(samples));
             
             for i = 1 : length(samples)
-                index = 1;
-                for j = 1 : length(r)
-                   if(r(j) < samples(i))
-                       index = j;
-                       j = length(r) + 1;
-                   end;
-                end;
-                samples_quantized(i) = q(index);
-            end;
+               for j = 1 : length(r)
+                   if(r(j) < samples(i)
+               end
+            end
         end
         
         %--------- Hierna niets veranderen -------------
