@@ -8,8 +8,23 @@ classdef Channel_Coding
              % bitstring : vector met ongecodereerde bits
             % OUTPUT
              % bitenc : vector met gecodeerde bits
-            G = []; % vul hier de generatormatrix in
-
+            
+            G = [[1 1 0 0 0 0 0 0 1 0 0 0 0 0];
+                 [0 1 0 0 0 1 0 0 1 0 1 0 0 0];
+                 [0 0 1 0 0 1 1 0 0 0 0 0 0 0];
+                 [0 1 0 1 0 1 1 0 0 0 0 0 0 0];
+                 [0 1 0 0 1 1 0 0 0 0 0 0 0 0];
+                 [0 0 0 0 0 1 1 0 1 0 0 1 0 0];
+                 [0 0 0 0 0 1 0 0 1 0 0 0 1 0];
+                 [0 1 0 0 0 1 1 1 1 0 0 0 0 0];
+                 [0 1 0 0 0 0 1 0 0 0 0 0 0 1];
+                 [0 0 0 0 0 0 1 0 1 1 0 0 0 0];] % vul hier de generatormatrix in
+            
+             % Minimale Hamming afstand: Via H^T; minimale set van rijen die
+            % de nul-vector uitkomt (c*H^T = 0), waarbij Hamming gewicht =
+            % Hamming afstand = aantal enen die set voorstelt
+            
+            
             bitstring = bitstring(:)'; % bitstring zeker een rij vector 
             N = length(bitstring);
             N_codewords = ceil(N/10);
@@ -23,7 +38,10 @@ classdef Channel_Coding
             % OUTPUT
              % bitsdec : vector met gedecodeerde bits bij volledige foutcorrectie
              % bool_error : 1 als een fout gedetecteerd is bij zuivere foutdetectie, 0 anders
-            H = [[1 1 0 1 1 0 0 1 0 0 1 0 0 1];[0 0 1 1 1 1 0 1 0 0 1 1 1 0 ];[0 0 1 1 0 0 1 1 0 1 0 1 0 1];[1 0 0 0 0 0 0 1 1 1 1 1 1 0]]; % checkmatrix
+            H = [[1 1 0 1 1 0 0 1 0 0 1 0 0 1];
+                 [0 0 1 1 1 1 0 1 0 0 1 1 1 0];
+                 [0 0 1 1 0 0 1 1 0 1 0 1 0 1];
+                 [1 0 0 0 0 0 0 1 1 1 1 1 1 0]]; % checkmatrix
             
             bitstring = bitstring(:)';
             N = length(bitstring);
