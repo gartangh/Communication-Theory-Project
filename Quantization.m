@@ -71,8 +71,8 @@ classdef Quantization
             subplot(1,2,2);
             pdf = plot(0:255, distr(0:255), 'LineWidth', 2, 'Color', 'Blue');
             hold on
-            q_points = plot(q, distr(q), 'r*', 'LineWidth', 3);
-            r_points = plot(r, distr(r), 'g+', 'LineWidth', 3);
+            q_points = stem(q, distr(q), 'r*', 'LineWidth', 3);
+            r_points = stem(r, distr(r), 'g+', 'LineWidth', 3);
             xlabel('u');
             ylabel('f_U(u)');
             legend([pdf, q_points, r_points], 'p.d.f.', 'reconstructieniveaus', 'kwantisatiedrempels');
@@ -151,6 +151,29 @@ classdef Quantization
             % Om de waarden van inverse van een (stijgende) anonieme functie te bepalen kan je gebruik maken van de functie Quantization.inverse()
             [~, distr] = make_probability_functions(Quantization.filename);
             M = 8;
+            g = @(u) (integral(@(x) distr(x), 0, u)) - 1/2;
+            
+            %plot(0:255, arrayfun(g, 0:255));
+            
+            r_i_uni = [-0.5:0.125:0.5];
+            q_i_uni = [-0.4375:0.125:0.4375];
+            
+            r = Quantization.inverse(g,r_i_uni);
+            q = Quantization.inverse(g,q_i_uni);
+            
+            GKD = sum(arrayfun(@(i) integral(@(u) (u - q(i)).^2.*distr(u), r(i), r(i+1)), 1:M));
+            gem = integral(@(u) u .* distr(u), 0, 255);
+            var = integral(@(u) (u - gem).^2.*distr(u),0,255);
+            SQR = 10*log10(var/GKD);
+            
+            p = distr(q);
+            entropie = - sum (p .* log2(p));
+            
+            % PLOT
+            plot(0:255, distr(0:255), 'Color', 'orange');
+            hold on
+            stem(r, distr(r), 'Color', 'red');
+            stem(q, distr(q), 'Color','blue');
         end
         
         function [samples_quantized]= quantize(r,q)
@@ -159,10 +182,21 @@ classdef Quantization
              % r : kwantisatiedremples
              % q : kwantisatieniveaus
             % OUTPUT
-             % samples_quantized - sequenty gekwantiseerd signaal
+             % samples_quantized : sequentie gekwantiseerd signaal
             [samples, ~] = make_probability_functions(Quantization.filename);
             samples = samples(:)'; % maak rij van samples
             samples_quantized = ones(size(samples));
+            
+            for i = 1 : length(samples)
+                index = 1;
+                for j = 1 : length(r)
+                   if(r(j) < samples(i))
+                       index = j;
+                       j = length(r) + 1;
+                   end;
+                end;
+                samples_quantized(i) = q(index);
+            end;
         end
         
         %--------- Hierna niets veranderen -------------
