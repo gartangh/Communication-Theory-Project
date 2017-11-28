@@ -47,19 +47,23 @@ classdef Channel_Coding
              % bitstring : vector met gecodeerde bits
             % OUTPUT
              % bitsdec : vector met gedecodeerde bits bij volledige foutcorrectie
-             % bool_error : 1 als een fout gedetecteerd is bij zuivere foutdetectie, 0 anders
+             % bool_error : 1 als een fout gedetecteerd is bij zuivere foutdetectie, 
+             % 0 anders
             H = [[1 1 0 1 1 0 0 1 0 0 1 0 0 1];
                  [0 0 1 1 1 1 0 1 0 0 1 1 1 0];
                  [0 0 1 1 0 0 1 1 0 1 0 1 0 1];
                  [1 0 0 0 0 0 0 1 1 1 1 1 1 0]]; % checkmatrix
             
             H_T = H.'; % getransponeerde checkmatrix
-            S = syndtable(H); % syndroomtabel
+            S = syndtable(H) % syndroomtabel
+            
+            % Manueel opstellen (p.320): H_T als syndroom, rijen aanvullen met
+            % 000...0, 100...0, 0100...0, ..., 0...01, resterende rijen
+            % KIEZEN door middel van exclusieve som van syndroom
            
             bitstring = bitstring(:)';
             N = length(bitstring);
             N_codewords = ceil(N/14);
-            
             bool_error = zeros(1, N_codewords * 14);
             
             for i = 1:N_codewords
