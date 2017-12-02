@@ -20,7 +20,7 @@ classdef Channel_Coding
                  [0 1 0 0 0 0 1 0 0 0 0 0 0 1];
                  [0 0 0 0 0 0 1 0 1 1 0 0 0 0];]; % vul hier de generatormatrix in
             
-            % Minimale Hamming afstand = 3:
+            % Minimale Hamming afstand d_min = 3:
             % Via H^T; minimale set van rijen die de nul-vector uitkomt (c*H^T = 0),
             % waarbij Hamming gewicht = Hamming afstand = aantal enen die set voorstelt
             
@@ -28,7 +28,6 @@ classdef Channel_Coding
             % gegarandeerd foutdetecterend vermogen £ = 2 = d_min - 1
             
             bitstring = bitstring(:)'; % bitstring zeker een rij vector 
-            %bitstring = str2num(bitstring); % bitstring omzetten naar vector
             N = length(bitstring); 
             N_codewords = ceil(N/10);
             bitstring = [bitstring, zeros(1, N_codewords*10-N)]; % vul aan met nullen als bitstring geen geheel aantal informatiewoorden is.             
@@ -49,13 +48,14 @@ classdef Channel_Coding
              % bitsdec : vector met gedecodeerde bits bij volledige foutcorrectie
              % bool_error : 1 als een fout gedetecteerd is bij zuivere foutdetectie, 
              % 0 anders
+             
             H = [[1 1 0 1 1 0 0 1 0 0 1 0 0 1];
                  [0 0 1 1 1 1 0 1 0 0 1 1 1 0];
                  [0 0 1 1 0 0 1 1 0 1 0 1 0 1];
                  [1 0 0 0 0 0 0 1 1 1 1 1 1 0]]; % checkmatrix
             
             H_T = H.'; % getransponeerde checkmatrix
-            S = syndtable(H) % syndroomtabel
+            S = syndtable(H); % syndroomtabel
             
             % Manueel opstellen (p.320): H_T als syndroom, rijen aanvullen met
             % 000...0, 100...0, 0100...0, ..., 0...01, resterende rijen
@@ -83,7 +83,10 @@ classdef Channel_Coding
             % g_x : CRC-veelterm
            % OUTPUT
             % bitenc : vector met gecodeerde bits
-          
+           
+           [q,s] = deconv(bitstring, g_x);
+           s = mod(s, 2);
+           bitenc = mod(bitstring + s, 2);
         end
         
         % Functie die de decoder van de inner code implementeert
@@ -94,7 +97,9 @@ classdef Channel_Coding
             % OUTPUT
              % bitsdec : vector met gedecodeerde bits
              % bool_error : 1 als een fout gedetecteerd is bij zuivere foutdetectie, 0 anders
+            [q,s] = deconv(bitstring, g_x);
+            s = mod(s,2);
+            
         end
-        
     end
 end
