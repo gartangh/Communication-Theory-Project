@@ -145,5 +145,112 @@ classdef Channel_Coding
             end
                 
         end
+        
+        function Calculations_report()
+            % constanten
+            H = [[1 1 0 1 1 0 0 1 0 0 1 0 0 1];
+                 [0 0 1 1 1 1 0 1 0 0 1 1 1 0];
+                 [0 0 1 1 0 0 1 1 0 1 0 1 0 1];
+                 [1 0 0 0 0 0 0 1 1 1 1 1 1 0]];
+            H_T = H.';
+            S = syndtable(H);
+            p = 0.05;
+            n = 14;
+            G = [[1 1 0 0 0 0 0 0 1 0 0 0 0 0];
+                 [0 1 0 0 0 1 0 0 1 0 1 0 0 0];
+                 [0 0 1 0 0 1 1 0 0 0 0 0 0 0];
+                 [0 1 0 1 0 1 1 0 0 0 0 0 0 0];
+                 [0 1 0 0 1 1 0 0 0 0 0 0 0 0];
+                 [0 0 0 0 0 1 1 0 1 0 0 1 0 0];
+                 [0 0 0 0 0 1 0 0 1 0 0 0 1 0];
+                 [0 1 0 0 0 1 1 1 1 0 0 0 0 0];
+                 [0 1 0 0 0 0 1 0 0 0 0 0 0 1];
+                 [0 0 0 0 0 0 1 0 1 1 0 0 0 0];];
+            
+            % berekening p_c
+            p_c = 0;
+            for i = 1:size(S,1)
+                p_c = p_c + p^sum(S(i,:))*(1-p)^(n-sum(S(i,:)));
+            end
+            
+            % berekening p_e_approx
+            p_c_approx = -1;
+            for i = 1:size(S,1)
+                p_c_approx = p_c_approx + p^sum(S(i,:));
+            end
+            p_e_approx = 1 - p_c_approx;
+           
+            % alle codewoorden genereren
+            codewords = zeros(0,14);
+            for i=1:1023
+                % informatiewoord b (1x10) opstellen
+                b = zeros(1,10);
+                teller = dec2bin(i);
+                for j=(10-length(teller)+1):10
+                    b(1, j) = str2num(teller(j-10+length(teller)));
+                end
+                % codewoord c (1x14) berekenen
+                c = Channel_Coding.Encode_outer(b);
+                
+                % checken of codewoord al in tabel zit
+                [check, ~] = ismember(codewords, c, 'rows');
+                if(sum(check) == 0)
+                    codewords = [codewords;c];
+                end
+            end
+                
+            % kans op een fout
+            p_e = 0;
+            for j=1:size(codewords,1)
+                for k=1:16
+                    S(k,:);
+                    c_plus_e = mod(codewords(j, :) + S(k,:),2);
+                    w = sum(c_plus_e);
+                    p_e = p_e + p^(w)*(1-p)^(14-w);
+                end
+            end
+            
+            % kans op niet-detecteerbare fout
+            p_m = 0;
+            for j=1:size(codewords,1)
+                    w = sum(codewords(j, :));
+                    p_m = p_m + p^(w)*(1-p)^(14-w);
+            end
+            p_m
+            
+            % benaderde kans op niet-detecteerbare fout
+            p_m_approx = 0;
+            for j=1:size(codewords,1)
+                    w = sum(codewords(j, :));
+                    p_m_approx = p_m_approx + p^(w);
+            end
+            p_m_approx
+            
+            % benaderde kans op een fout
+            p_e_aprx = 0;
+            for j=1:size(codewords,1)
+                for k=1:16
+                    S(k,:);
+                    c_plus_e = mod(codewords(j, :) + S(k,:),2);
+                    w = sum(c_plus_e);
+                    p_e_aprx = p_e_aprx + p^(w);
+                end
+            end
+            
+            % ontwerpcriterium
+            p_e_analytic = zeros(0,1);
+            for p_test = 0.001:.001:0.5
+                p_e = 0;
+                for j=1:size(codewords,1)
+                    for k=1:16
+                        S(k,:);
+                        c_plus_e = mod(codewords(j, :) + S(k,:),2);
+                        w = sum(c_plus_e);
+                        p_e = p_e + p_test^(w)*(1-p_test)^(14-w);
+                    end
+                end
+                p_e_analytic = [p_e_analytic; [p_e]];
+            end
+        end
     end
 end
