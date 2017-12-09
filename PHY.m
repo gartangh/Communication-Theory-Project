@@ -77,27 +77,11 @@ classdef PHY
                     
                 case '4QAM'
                     % 4QAM mapping here.
-                    dQAM = sqrt(6/(4-1));
-                    deltaQAM = dQAM/2;
-                    
-                    bitstring = zeros(length(a)*2);
+                    bitstring = zeros(1,length(a)*2);
                     
                     for j = 1:length(a)
-                        if      (a(j) == sqrt(2)*deltaQAM*exp(1*1i*pi/4))
-                            bitstring(2*j-1)    = 0;
-                            bitstring(2*j)      = 0;
-                        elseif  (a(j) == sqrt(2)*deltaQAM*exp(3*1i*pi/4))
-                            bitstring(2*j-1)    = 0;
-                            bitstring(2*j)      = 1;
-                        elseif  (a(j) == sqrt(2)*deltaQAM*exp(5*1i*pi/4))
-                            bitstring(2*j-1)    = 1;
-                            bitstring(2*j)      = 1;
-                        elseif  (a(j) == sqrt(2)*deltaQAM*exp(7*1i*pi/4))
-                            bitstring(2*j-1)    = 1;
-                            bitstring(2*j)      = 0;
-                        else
-                            % Incorrect input
-                        end
+                        bitstring(2*j-1) = (real(a(j))+1)/2;
+                        bitstring(2*j) = (imag(a(j))+1)/2;
                     end
                     
                 case '4PAM'
@@ -105,23 +89,20 @@ classdef PHY
                     dPAM = sqrt(12/(4^2-1));
                     deltaPAM = dPAM/2;
                     
-                    bitstring = zeros(length(a)*2);
+                    bitstring = zeros(1,length(a)*2);
                     
                     for j = 1:length(a)
-                        if (a(j) == -3*deltaPAM)
-                            bitstring(2*j-1)    = 0;
-                            bitstring(2*j)      = 0;
-                        elseif (a(j) == -1*deltaPAM)
-                            bitstring(2*j-1)    = 0;
-                            bitstring(2*j)      = 1;
-                        elseif (a(j) == 1*deltaPAM)
-                            bitstring(2*j-1)    = 1;
-                            bitstring(2*j)      = 1;
-                        elseif (a(j) == 3*deltaPAM)
-                            bitstring(2*j-1)    = 1;
-                            bitstring(2*j)      = 0;
-                        else
-                            % Incorrect input
+                        switch(a(j))
+                            case -3*deltaPAM
+                                bitstring(2*j-1:2*j) = [0 0];
+                            case -1*deltaPAM
+                                bitstring(2*j-1:2*j) = [0 1];
+                            case 1*deltaPAM
+                                bitstring(2*j-1:2*j) = [1 1];
+                            case 3*deltaPAM
+                                bitstring(2*j-1:2*j) = [1 0];
+                            otherwise
+                                error('Incorrecte input');
                         end
                     end
                   
