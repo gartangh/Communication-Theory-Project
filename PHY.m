@@ -16,31 +16,23 @@ classdef PHY
             switch(constellation)
                 case 'BPSK'                    
                     % BPSK mapping here.
-                    a = (bitstring-1/2)*2; % 0 -> -1 & 1 -> 1.
+                    a = (bitstring-1/2)*2; % 0 -> -1 & 1 -> 1.       
                     
                 case '4QAM'
                     % 4QAM mapping here.
-                    dQAM = sqrt(6/(4-1));
-                    deltaQAM = dQAM/2;
+                    dPAM = sqrt(12/(2^2-1));
+                    deltaPAM = dPAM/2;
                     
-                    a = zeros(length(bitstring)/2);
-                    
+                    a = zeros(1, length(bitstring)/2);
+                   
                     for j = 1:length(bitstring)/2
-                        x = bitstring(2*j-1);
-                        y = bitstring(2*j);
-         
-                        if (x==0 && y==0)
-                            a(j) = sqrt(2)*deltaQAM*exp(1*1i*pi/4);
-                        elseif (x==0 && y==1)
-                            a(j) = sqrt(2)*deltaQAM*exp(3*1i*pi/4);
-                        elseif (x==1 && y==1)
-                            a(j) = sqrt(2)*deltaQAM*exp(5*1i*pi/4);
-                        elseif(x==1 && y==0)
-                            a(j) = sqrt(2)*deltaQAM*exp(7*1i*pi/4);
-                        else
-                            % Incorrect input
-                        end
-                    end
+                        % Eerst mappen van 0 -> -1 en 1 -> 1 en deze dan
+                        % als coordinaten gebruiken. Door de definitie van
+                        % Gray coding komt dit dan neer op telkens de
+                        % dichtsbijzijnde afstand (vanaf linksbeneden, met
+                        % de klok mee.
+                        a(j) = (bitstring(2*j-1) - 1/2)*2 * deltaPAM + (bitstring(2*j) - 1/2)*2 * deltaPAM * i;
+                    end     
                     
                 case '4PAM'
                     % 4PAM mapping here.
@@ -51,7 +43,6 @@ classdef PHY
                     for j = 1:length(bitstring)/2
                         % Wordt gelezen van links naar rechts
                         decimal = bi2de([bitstring(2*j) bitstring(2*j-1)]);
-                        disp(decimal);
                         switch(decimal)
                             case 0
                                 a(j) = -3*deltaPAM;
