@@ -9,7 +9,10 @@ classdef PHY
              % constellation : ofwel 'BPSK', '4QAM', '4PSK', '4PAM', etc.
             % OUTPUT
              % a : vector met (complexe) symbolen. 
-                
+            N = numel(bitstring);
+            if bitget(N,1)
+                error('Bitstring moet een even lengte hebben');
+            end
             switch(constellation)
                 case 'BPSK'                    
                     % BPSK mapping here.
@@ -25,7 +28,7 @@ classdef PHY
                     for j = 1:length(bitstring)/2
                         x = bitstring(2*j-1);
                         y = bitstring(2*j);
-                        
+         
                         if (x==0 && y==0)
                             a(j) = sqrt(2)*deltaQAM*exp(1*1i*pi/4);
                         elseif (x==0 && y==1)
@@ -43,24 +46,24 @@ classdef PHY
                     % 4PAM mapping here.
                     dPAM = sqrt(12/(4^2-1));
                     deltaPAM = dPAM/2;
-                    
-                    a = zeros(length(bitstring)/2);
+                    a = zeros(1, length(bitstring)/2);
                     
                     for j = 1:length(bitstring)/2
-                        x = bitstring(2*j-1);
-                        y = bitstring(2*j);
-                        
-                        if (x==0 && y==0)
-                            a(j) = -3*deltaPAM;
-                        elseif (x==0 && y==1)
-                            a(j) = -1*deltaPAM;
-                        elseif (x==1 && y==1)
-                            a(j) = 1*deltaPAM;
-                        elseif(x==1 && y==0)
-                            a(j) = 3*deltaPAM;
-                        else
-                            % Incorrect input
-                        end
+                        % Wordt gelezen van links naar rechts
+                        decimal = bi2de([bitstring(2*j) bitstring(2*j-1)]);
+                        disp(decimal);
+                        switch(decimal)
+                            case 0
+                                a(j) = -3*deltaPAM;
+                            case 1
+                                a(j) = -1*deltaPAM;
+                            case 3
+                                a(j) = 1*deltaPAM;
+                            case 2
+                                a(j) = 3*deltaPAM;
+                            otherwise
+                                error('De input is incorrect');
+                        end;
                     end
                                
                 otherwise
