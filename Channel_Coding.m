@@ -60,8 +60,24 @@ classdef Channel_Coding
             % 0100...0, ..., 0...01, resterende rijen KIEZEN door middel 
             % van exclusieve som van syndroom
             % AUTOMATISCH LATEN GENEREREN MET MATLAB:            
-            S = syndtable(H); % syndroomtabel in volgorde van oplopend syndroom
-           
+            % S = syndtable(H); 
+            S = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+                 [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0];
+                 [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0];
+                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0];
+                 [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0];
+                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0];
+                 [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0];
+                 [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+                 [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
+                 [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0];
+                 [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0];
+                 [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+                 [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0];]; % syndroomtabel in volgorde van oplopend syndroom 
+             
             bitstring = bitstring(:)'; % bitstring zeker een rij vector 
             N = length(bitstring); 
             N_codewords = ceil(N/14);
@@ -144,134 +160,6 @@ classdef Channel_Coding
                 bool_error = 0;
             end
                 
-        end
-        
-        function Calculations_report()
-            % constanten
-            H = [[1 1 0 1 1 0 0 1 0 0 1 0 0 1];
-                 [0 0 1 1 1 1 0 1 0 0 1 1 1 0];
-                 [0 0 1 1 0 0 1 1 0 1 0 1 0 1];
-                 [1 0 0 0 0 0 0 1 1 1 1 1 1 0]];
-            H_T = H.';
-            S = syndtable(H);
-            p = 0.05;
-            n = 14;
-            G = [[1 1 0 0 0 0 0 0 1 0 0 0 0 0];
-                 [0 1 0 0 0 1 0 0 1 0 1 0 0 0];
-                 [0 0 1 0 0 1 1 0 0 0 0 0 0 0];
-                 [0 1 0 1 0 1 1 0 0 0 0 0 0 0];
-                 [0 1 0 0 1 1 0 0 0 0 0 0 0 0];
-                 [0 0 0 0 0 1 1 0 1 0 0 1 0 0];
-                 [0 0 0 0 0 1 0 0 1 0 0 0 1 0];
-                 [0 1 0 0 0 1 1 1 1 0 0 0 0 0];
-                 [0 1 0 0 0 0 1 0 0 0 0 0 0 1];
-                 [0 0 0 0 0 0 1 0 1 1 0 0 0 0];];
-            
-            % berekening p_c
-            p_c = 0;
-            for i = 1:size(S,1)
-                p_c = p_c + p^sum(S(i,:))*(1-p)^(n-sum(S(i,:)));
-            end
-            p_c
-            
-            % berekening p_c_approx
-            p_c_aprx = -1;
-            for i = 1:size(S,1)
-                p_c_aprx = p_c_aprx + p^sum(S(i,:))*(1-sum(S(i,:))*p);
-            end
-            p_c_aprx
-           
-            % alle codewoorden genereren
-            codewords = zeros(0,14);
-            for i=0:1023
-                % informatiewoord b (1x10) opstellen
-                b = zeros(1,10);
-                teller = dec2bin(i);
-                for j=(10-length(teller)+1):10
-                    b(1, j) = str2num(teller(j-10+length(teller)));
-                end
-                % codewoord c (1x14) berekenen
-                c = Channel_Coding.Encode_outer(b);
-                
-                % checken of codewoord al in tabel zit
-                [check, ~] = ismember(codewords, c, 'rows');
-                if(sum(check) == 0)
-                    codewords = [codewords;c];
-                end
-            end
-                
-            % kans op een fout
-            p_e = 0;
-            for j=2:size(codewords,1)
-                for k=1:16
-                    S(k,:);
-                    c_plus_e = mod(codewords(j, :) + S(k,:),2);
-                    w = sum(c_plus_e);
-                    p_e = p_e + p^(w)*(1-p)^(14-w);
-                end
-            end
-            p_e          
-           
-            % benaderde kans op een fout
-            p_e_aprx = 0;
-            for j=2:size(codewords,1)
-                for k=1:16
-                    S(k,:);
-                    c_plus_e = mod(codewords(j, :) + S(k,:),2);
-                    w = sum(c_plus_e);
-                    p_e_aprx = p_e_aprx + p^(w);
-                end
-            end
-            p_e_aprx
-            
-            % kans op niet-detecteerbare fout
-            p_m = 0;
-            for j=2:size(codewords,1)
-                    w = sum(codewords(j, :));
-                    p_m = p_m + p^(w)*(1-p)^(14-w);
-            end
-            p_m
-            
-            % benaderde kans op niet-detecteerbare fout
-            p_m_aprx = 0;
-            for j=2:size(codewords,1)
-                    w = sum(codewords(j, :));
-                    p_m_aprx = p_m_aprx + p^(w);
-            end
-            p_m_aprx
-           
-            % kans op een fout
-            p_f = 0;
-            for j=1:size(codewords,1)
-                c_plus_e = mod(codewords(j, :) + [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],2);
-                w = sum(c_plus_e);
-                p_f = p_f + p^(w)*(1-p)^(14-w);
-            end
-            p_f
-            
-            % benaderde kans op een fout
-            p_f_aprx = 0;
-            for j=1:size(codewords,1)
-                c_plus_e = mod(codewords(1, :) + [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],2);
-                w = sum(c_plus_e);
-                p_f_aprx = p_f_aprx + p^(w);
-            end
-            p_f_aprx
-            
-            % ontwerpcriterium
-            p_e_analytic = zeros(0,1);
-            for p_test = 0.001:.001:0.5
-                p_e = 0;
-                for j=1:size(codewords,1)
-                    for k=1:16
-                        S(k,:);
-                        c_plus_e = mod(codewords(j, :) + S(k,:),2);
-                        w = sum(c_plus_e);
-                        p_e = p_e + p_test^(w)*(1-p_test)^(14-w);
-                    end
-                end
-                p_e_analytic = [p_e_analytic; [p_e]];
-            end
         end
     end
 end
