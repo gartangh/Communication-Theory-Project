@@ -153,7 +153,22 @@ classdef Quantization
             M = 8;
             g = @(u) (integral(@(x) distr(x), 0, u)) - 1/2;
             
-            %plot(0:255, arrayfun(g, 0:255));
+            %g_plot = plot(0:255, arrayfun(g, 0:255));
+            %hold on
+            
+            %l = legend([g_plot], 'g(u)', 'Location', 'northeast');
+            %set(l,'Interpreter','latex')
+            
+            %t = title('Verloop van g(u)', 'FontSize',16);
+            %set(t,'Interpreter','latex')
+            
+            %x = xlabel('$u$', 'FontSize',15);
+            %y = ylabel('$g(u)$', 'FontSize',15);
+            %set(x,'Interpreter','latex')
+            %set(y,'Interpreter','latex')
+            
+            %axis([0 255 -0.65 0.65]);
+            %hold off;
             
             r_i_uni = [-0.5:0.125:0.5];
             q_i_uni = [-0.4375:0.125:0.4375];
@@ -170,10 +185,23 @@ classdef Quantization
             entropie = - sum (p .* log2(p));
             
             % PLOT
-            plot(0:255, distr(0:255), 'Color', 'orange');
+            f_plot = plot(0:255, distr(0:255), 'Color', 'Green');
             hold on
-            stem(r, distr(r), 'Color', 'red');
-            stem(q, distr(q), 'Color','blue');
+            r_plot = stem(r, distr(r), 'Color', 'Red');
+            q_plot = stem(q, distr(q), 'Color','Blue');
+            
+            l = legend([r_plot, q_plot, f_plot], 'reconstructieniveaus', 'kwantisatiedrempels', 'f_{u}(u)', 'Location', 'northeast');
+            set(l,'Interpreter','latex')
+            
+            t = title('Compansiekwantisator', 'FontSize',16);
+            set(t,'Interpreter','latex')
+            
+            xlabel('u', 'FontSize',15);
+            y = ylabel('$f_{u}(u)$', 'FontSize',15);
+            set(y,'Interpreter','latex')
+            
+            axis([0 255 0 0.016]);
+            hold off;
         end
         
         function [samples_quantized]= quantize(r,q)
@@ -193,10 +221,10 @@ classdef Quantization
                    if(r(j) < samples(i))
                        index = j;
                        j = length(r) + 1;
-                   end;
-                end;
+                   end
+                end
                 samples_quantized(i) = q(index);
-            end;
+            end
         end
         
         %--------- Hierna niets veranderen -------------
