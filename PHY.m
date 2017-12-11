@@ -16,29 +16,30 @@ classdef PHY
             switch(constellation)
                 case 'BPSK'                    
                     % BPSK mapping here.
-                    a = (bitstring-1/2)*2; % 0 -> -1 & 1 -> 1.       
+                    a = (bitstring-1/2)*2; % 0 -> -1 & 1 -> 1;
                     
                 case '4QAM'
                     % 4QAM mapping here.
-                    dPAM = sqrt(12/(2^2-1));
-                    deltaPAM = dPAM/2;
+                    dQAM = sqrt(12/(4-1)); % 2
+                    deltaQAM = dQAM/2; % 1
                     
-                    a = zeros(1, length(bitstring)/2);
+                    a = zeros(1,length(bitstring)/2);
                    
                     for j = 1:length(bitstring)/2
                         % Eerst mappen van 0 -> -1 en 1 -> 1 en deze dan
                         % als coordinaten gebruiken. Door de definitie van
                         % Gray coding komt dit dan neer op telkens de
                         % dichtsbijzijnde afstand (vanaf linksbeneden, met
-                        % de klok mee.
-                        a(j) = (bitstring(2*j-1) - 1/2)*2 * deltaPAM + (bitstring(2*j) - 1/2)*2 * deltaPAM * i;
+                        % de klok mee.)
+                        a(j) = (bitstring(2*j-1) - 1/2)*2 * deltaQAM + (bitstring(2*j) - 1/2)*2 * deltaQAM * 1i;
                     end     
                     
                 case '4PAM'
                     % 4PAM mapping here.
-                    dPAM = sqrt(12/(4^2-1));
-                    deltaPAM = dPAM/2;
-                    a = zeros(1, length(bitstring)/2);
+                    dPAM = sqrt(12/(4^2-1)); % sqrt(12/15)
+                    deltaPAM = dPAM/2; % sqrt(12/15)/2
+                    
+                    a = zeros(1,length(bitstring)/2);
                     
                     for j = 1:length(bitstring)/2
                         % Wordt gelezen van links naar rechts
@@ -66,7 +67,7 @@ classdef PHY
         function bitstring = demapper(a, constellation)
             % INPUT
              % a : vector met (complexe) symbolen.
-             % constellation : ofwel 'BPSK', 'QAM', '4PSK', '4PAM', etc.  
+             % constellation : ofwel 'BPSK', 'QAM', '4PSK', '4PAM', etc.
             % OUTPUT
              % bitstring : vector met bits horend bij a.
             
@@ -119,10 +120,10 @@ classdef PHY
             % OUTPUT
              % a_estim : vector met geschatte (complexe) symbolen.           
             
-            a_estim = zeros(length(x)); 
+            a_estim = zeros(1,length(x));
             
             switch(constellation)
-                case 'BPSK'                   
+                case 'BPSK'            
                     % BPSK here
                     for i = 1:length(x)
                         if real(x(i)) < 0
@@ -133,7 +134,7 @@ classdef PHY
                     end
                     
                 case '4QAM'
-                    % 4QAM here            
+                    % 4QAM here
                     for i = 1:length(x)
                         if (real(x(i)) >= 0 && imag(x(i)) >= 0)
                             a_estim(i) = sqrt(2)*deltaQAM*exp(1*1i*pi/4);
@@ -144,7 +145,7 @@ classdef PHY
                         elseif (real(x(i)) > 0 && imag(x(i)) < 0)
                             a_estim(i) = sqrt(2)*deltaQAM*exp(7*1i*pi/4);
                         else
-                            % Incorrect input
+                            error('Incorrecte input');
                         end
                     end
                     
@@ -178,7 +179,7 @@ classdef PHY
             
             u = rdown/hch_hat*exp(1i*theta_hat);
             
-            scatter(real(u),imag(u));   
+            scatter(real(u),imag(u));
         end
         
         % Functie die symbolen op een puls zet en dit signaal moduleert op een golf.
@@ -186,7 +187,7 @@ classdef PHY
             % INPUT
              % a : vector van symbolen.
              % T : symboolperiode in seconden.
-             % Ns : samples per symbool. 
+             % Ns : samples per symbool.
              % frequency : carrier frequentie in Hz.
              % alpha : roll-off factor.
              % Lf : pulse duur (in aantal symboolperioden).
@@ -197,11 +198,12 @@ classdef PHY
              % De bemonsteringsfrequentie Ns/T moet minstens tweemaal zo hoog zijn
              % als de hoogste frequentie, aanwezig in het signaal,
              % om het origineel zonder fouten te kunnen reproduceren.
+             % Ns/T >= 2(f0+B)
             
             t = -Lf*T:T/Ns:Lf*T;
             p = pulse(t,T,alpha);
             % optelling uit opgave (2)
-            x = zeros(length(t),1);
+            x = zeros(1,length(t));
             for k = 0:length(a)-1
                 x(t/T*Ns+Lf*T) = x(t/T*Ns+Lf*T) + a(k)*p(t/T*Ns+Lf*T - k*T/T*Ns+Lf*T);
             end
@@ -283,5 +285,5 @@ classdef PHY
             nl = sqrt(sigma) * (1/sqrt(2) * (randn(1,lenght(s)) + 1i * randn(1,lenght(s))));
             r = hch*s + nl;
         end
-   end
+    end
 end
