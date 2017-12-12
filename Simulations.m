@@ -1,6 +1,5 @@
 classdef Simulations
     properties
-        codewords = Calc_codewords();
     end
     methods (Static = true)
         % genereren alle codewoorden
@@ -446,8 +445,10 @@ classdef Simulations
             % [["T_max", "p_e_ARQ_ana", "p_e_ARQ_sim"];[T_max,p_e_ARQ_ana,(p_e_ARQ_sim)]]
             
             hold on
-            plot_sim = loglog(T_max,p_e_ARQ_sim, 'LineWidth', 1, 'Color', 'Red');
-            plot_ana = loglog(T_max,p_e_ARQ_ana, 'LineWidth', 2, 'Color', 'Blue');
+            %plot_sim = loglog(T_max,p_e_ARQ_sim, 'LineWidth', 1, 'Color', 'Red');
+            %plot_ana = loglog(T_max,p_e_ARQ_ana, 'LineWidth', 2, 'Color', 'Blue');
+            plot_sim = plot(T_max,p_e_ARQ_sim, 'LineWidth', 1, 'Color', 'Red');
+            plot_ana = plot(T_max,p_e_ARQ_ana, 'LineWidth', 2, 'Color', 'Blue');
             
             l = legend([plot_ana, plot_sim], '$p_{e}^{ARQ1}$ analytisch', '$p_{e}^{ARQ1}$ experimenteel', 'Location', 'northeast');
             set(l,'Interpreter','latex')
@@ -462,43 +463,52 @@ classdef Simulations
             axis([0 15 0 0.20]);
             hold off;
         end
- 
         
-        function Sim_inner_5(T_max)
+        function [p_e_ARQ, deb] = Sim_inner_5(T_max)
             % INPUT
              % T_max : hoeveelste retransmissie wanneer volledige
              % decodering toegepast wordt
             % OUTPUT
              % p_e_ARQ: kans op decodeerfout
-             
+            
             p = 0.05; % bitovergangwaarschijnlijkhied
             g_x = [1, 1, 0, 1, 0, 1];
-            N = 2; % testgrootte
+            N = 2000; % testgrootte
             N_retr = N; % aantal woorden in huidige (re)transmissie
             k = 5 * N; % aantal informatiebits (aantal woorden * 10)
-            n = 14 * N; % aantal verzonden bits (minstens aantal woorden * 14)
+            n = 0; % aantal verzonden bits (minstens aantal woorden * 14)
             T = 0; % aantal retransmissies (minstens 1)
             controle = zeros(1,N_retr); % rij met 1 op i-de plaats als na T_max 
                                         % transmissies i-de ontvangen woord niet
                                         % overeenkomt met verstuurde woord
-            
+                                        
+            % bij elke transmissie oorspronkelijke en correcte/niet opgemerkte 
+            % foute woorden hierin wegschrijven ter controle
+            b_sent = zeros(0,0); % alle verstuurde/geencodeerde woorden
+            b_rec = zeros(0,0); % alle ontvangen/gedecodeerde woorden
             
             % random input string
             b = zeros(1,N_retr*5);
+            
             for i=1:N_retr
-                b_rand = dec2bin((floor(rand(1).*31)))
+                b_rand = dec2bin((floor(rand(1).*31)));
                 for j=(5-length(b_rand)+1):5
                     b(1, (i-1)*5+j) = str2num(b_rand(j-5+length(b_rand)));
                 end
             end
-            b
                 
-           while (T <= T_max && N_retr > 0)     
-                % encoderen van woord
-                c_i = Channel_Coding.Encode_inner(b, g_x);
+            while (T <= T_max && N_retr > 0) 
+                n = n + 14 * N_retr; % per extra woord dat retransmissie vereist 14 bits extra !!!
+                
+                % inner encoderen van woord
+                c_i = zeros(1,N_retr*10);
+                for i = 1:N_retr
+                    c_i(10*(i-1)+1:10*i) = Channel_Coding.Encode_inner(b(5*(i-1)+1:5*i), g_x);
+                end
+                
+                % outer encoderen van woord
                 c_o = Channel_Coding.Encode_outer(c_i);
-                c_i
-
+                
                 % modellering van BSC kanaal met bitovergangwaarschijnlijkheid
                 % p
                 r = c_o;
@@ -512,77 +522,142 @@ classdef Simulations
                         end
                     end
                 end
-                c_o
-                r
-
-                [b_rec_o, b_err_o] = Channel_Coding.Decode_outer(r);
-                [b_rec_i, b_err_i] = Channel_Coding.Decode_inner(b_rec_o, g_x);
-                b_rec_o
-                b_err_o
-                b_rec_i
-                b_err_i
                 
-                b_retr = zeros(0,0);
-                for l=1:N_retr
-                    if(b_err_i(l) == 1)
-                        b_retr = [b_retr, b(5*(l-1)+1:5*l)]; 
+                b_rec_o = zeros(N_retr*14);
+                [b_rec_o, ~] = Channel_Coding.Decode_outer(r);
+                
+                b_retr = zeros(0,0); % lijst van te retransmitten woorden
+                N_retr_prev = N_retr;
+                N_retr = 0;
+                for i = 1:N_retr_prev
+                    [b_rec_i, b_err_i] = Channel_Coding.Decode_inner(b_rec_o(10*(i-1)+1:10*i), g_x); % i-de gedecodeerde woord en foutpatroon
+                    if(b_err_i == 1)
+                        b_retr = [b_retr, b(5*(i-1)+1:5*i)]; 
+                        N_retr = N_retr + 1;
+                    else
+                        b_sent = [b_sent, b(5*(i-1)+1:5*i)];
+                        b_rec = [b_rec, b_rec_i];
                     end
                 end
-                
                 b = b_retr;
-                N_retr = sum(b_err_i(1,:)) % N woorden foutief ontvangen dus retransmissie
-                n = n + 14 * N_retr; % per extra woord dat retransmissie vereist 14 bits extra
                 T = T + 1;
             end
+            if(N_retr ~= 0)
+                for i = 1:N_retr
+                    [b_rec_i, ~] = Channel_Coding.Decode_inner(b_rec_o(10*(i-1)+1:10*i), g_x); % i-de gedecodeerde woord en foutpatroon
+                    b_sent = [b_sent, b(5*(i-1)+1:5*i)];
+                    b_rec = [b_rec, b_rec_i];
+                end
+            end
             
-            for l=1:N_retr
-                if (isequal(b(5*(l-1)+1:5*(l)),b_rec_i(5*(l-1)+1:5*(l))))
+            for l=1:N
+                if (isequal(b_sent(5*(l-1)+1:5*(l)),b_rec(5*(l-1)+1:5*(l))))
                     controle(l) = 0;
                 else
                     controle(l) = 1;
                 end
             end
                    
-            deb = k / n
-            p_e_ARQ = vpa(sum(controle(1,:))/N)
+            deb = k / n;
+            p_e_ARQ = vpa(sum(controle(1,:))/N);
         end
         
-        function Sim_inner_8()
+        function Error_inner_5(type)
+            % INPUT
+             % type ('p' voor p_e_ARQ, 'd' voor debiet)
+            
+            p_e_ARQ_2a_sim = zeros(7,1);
+            p_e_ARQ_2a_ana = zeros(7,1);
+            debiet_sim = zeros(7,1);
+            T_max = [0:6]';
+            for i = 0:size(T_max,1)-1
+               [p_e_ARQ_2a_sim(i+1,1), debiet_sim(i+1,1)] = Simulations.Sim_inner_5(i);
+               p_e_ARQ_2a_ana(i+1,1) = 0.15163^(i+1);
+            end
+            
+            %[["T_max", "p_e_ARQ_ana", "p_e_ARQ_sim", "debiet"]; [T_max,p_e_ARQ_2a_ana,p_e_ARQ_2a_sim, debiet_sim]]
+            
+            hold on
+            
+            if(type == 'p')
+                t = title('Kans op een decodeerfout, $p_{e}^{ARQ2a}$, in functie van max aantal toegelaten retransmissies, $T_{max}$', 'FontSize', 16);
+            
+                plot_sim = plot(T_max,p_e_ARQ_2a_sim, 'LineWidth', 1, 'Color', 'Red');                
+                plot_ana = plot(T_max,p_e_ARQ_2a_ana, 'LineWidth', 2, 'Color', 'Blue');
+            
+                l = legend([plot_ana, plot_sim], '$p_{e}^{ARQ2a}$ analytisch', '$p_{e}^{ARQ2a}$ experimenteel', 'Location', 'northeast');
+            
+                y = ylabel('$p_{e}^{ARQ2a}$', 'FontSize',15);
+                axis([0 6 0 0.20]);
+            elseif(type == 'd')
+                t = title('Informatiedebiet, $\frac{k}{n}$, in functie van max aantal toegelaten retransmissies, $T_{max}$', 'FontSize', 16);
+            
+                plot_deb = plot(T_max,debiet_sim, 'LineWidth', 1, 'Color','Blue');
+
+                l = legend([plot_deb], 'Informatiedebiet $\frac{k}{n}$', 'Location', 'northeast');
+                
+                y = ylabel('$\frac{k}{n}$', 'FontSize',15);
+                axis([0 6 0.28 0.37]);
+            end
+            
+            set(l,'Interpreter','latex')
+            set(t,'Interpreter','latex')
+            
+            x = xlabel('$T_{max}$', 'FontSize',15);
+            set(x,'Interpreter','latex')
+            set(y,'Interpreter','latex')
+                       
+            hold off;
+        end
+        
+        function [p_e_ARQ, deb] = Sim_inner_8(T_max)
             % INPUT
              % T_max : hoeveelste retransmissie wanneer volledige
              % decodering toegepast wordt
             % OUTPUT
              % p_e_ARQ: kans op decodeerfout
-             
+            
             p = 0.05; % bitovergangwaarschijnlijkhied
-            g_x = [1, 1, 0, 1, 0, 1];
-            N = 1; % testgrootte
+            g_x = [1, 1, 0, 0, 1, 1, 0, 1, 1];
+            N = 2000; % testgrootte
             N_retr = N; % aantal woorden in huidige (re)transmissie
-            k = 5 * N; % aantal informatiebits (aantal woorden * 10)
-            n = 14 * N; % aantal verzonden bits (minstens aantal woorden * 14)
+            k = 2 * N; % aantal informatiebits (aantal woorden * 10)
+            n = 0; % aantal verzonden bits (minstens aantal woorden * 14)
             T = 0; % aantal retransmissies (minstens 1)
             controle = zeros(1,N_retr); % rij met 1 op i-de plaats als na T_max 
                                         % transmissies i-de ontvangen woord niet
                                         % overeenkomt met verstuurde woord
+                                        
+            % bij elke transmissie oorspronkelijke en correcte/niet opgemerkte 
+            % foute woorden hierin wegschrijven ter controle
+            b_sent = zeros(0,0); % alle verstuurde/geencodeerde woorden
+            b_rec = zeros(0,0); % alle ontvangen/gedecodeerde woorden
             
-            while (T <= T_max && N_retr > 0)
-                % random input string
-                b = zeros(1,N_retr*5);
-                for i=1:N_retr
-                    b_rand = dec2bin((floor(rand(1).*1023)));
-                    for j=(5-length(b_rand)+1):5
-                        b(1, (i-1)*5+j) = str2num(b_rand(j-5+length(b_rand)));
-                    end
+            % random input string
+            b = zeros(1,N_retr*2);
+            
+            for i=1:N_retr
+                b_rand = dec2bin((floor(rand(1).*3)));
+                for j=(2-length(b_rand)+1):2
+                    b(1, (i-1)*2+j) = str2num(b_rand(j-2+length(b_rand)));
                 end
-                b
+            end
                 
-                % encoderen van woord
-                c_i = Channel_Coding.Encode_inner(b, g_x);
+            while (T <= T_max && N_retr > 0) 
+                n = n + 14 * N_retr; % per extra woord dat retransmissie vereist 14 bits extra !!!
+                
+                % inner encoderen van woord
+                c_i = zeros(1,N_retr*10);
+                for i = 1:N_retr
+                    c_i(10*(i-1)+1:10*i) = Channel_Coding.Encode_inner(b(2*(i-1)+1:2*i), g_x);
+                end
+                
+                % outer encoderen van woord
                 c_o = Channel_Coding.Encode_outer(c_i);
-
+                
                 % modellering van BSC kanaal met bitovergangwaarschijnlijkheid
                 % p
-                r = c;
+                r = c_o;
                 for j=1:(N_retr*14)
                     p_rand = rand(1);
                     if(p_rand < p)
@@ -593,30 +668,36 @@ classdef Simulations
                         end
                     end
                 end
-                c
-                r
-
-                [b_rec_o, b_err_o] = Channel_Coding.Decode_outer(r);
-                [b_rec_i, b_err_i] = Channel_Coding.Decode_inner(b_rec_o, g_x);
-                b_rec_o
-                b_err_o
-                b_rec_i
-                b_err_i
                 
-                b_retr_i = zeros(0,0);
-                for l=1:N_retr
-                    if(b_err(l) == 1)
-                        b_retr = [b_retr, b(10*(l-1)+1:10*l)]; 
+                b_rec_o = zeros(N_retr*14);
+                [b_rec_o, ~] = Channel_Coding.Decode_outer(r);
+                
+                b_retr = zeros(0,0); % lijst van te retransmitten woorden
+                N_retr_prev = N_retr;
+                N_retr = 0;
+                for i = 1:N_retr_prev
+                    [b_rec_i, b_err_i] = Channel_Coding.Decode_inner(b_rec_o(10*(i-1)+1:10*i), g_x); % i-de gedecodeerde woord en foutpatroon
+                    if(b_err_i == 1)
+                        b_retr = [b_retr, b(2*(i-1)+1:2*i)]; 
+                        N_retr = N_retr + 1;
+                    else
+                        b_sent = [b_sent, b(2*(i-1)+1:2*i)];
+                        b_rec = [b_rec, b_rec_i];
                     end
                 end
-
-                N_retr = sum(b_err(1,:)) % N woorden foutief ontvangen dus retransmissie
-                n = n + 14 * N_retr; % per extra woord dat retransmissie vereist 14 bits extra
+                b = b_retr;
                 T = T + 1;
             end
+            if(N_retr ~= 0)
+                for i = 1:N_retr
+                    [b_rec_i, ~] = Channel_Coding.Decode_inner(b_rec_o(10*(i-1)+1:10*i), g_x); % i-de gedecodeerde woord en foutpatroon
+                    b_sent = [b_sent, b(2*(i-1)+1:2*i)];
+                    b_rec = [b_rec, b_rec_i];
+                end
+            end
             
-            for l=1:N_retr
-                if (isequal(b(5*(l-1)+1:5*(l)),b_rec(5*(l-1)+1:5*(l))))
+            for l=1:N
+                if (isequal(b_sent(2*(l-1)+1:2*(l)),b_rec(2*(l-1)+1:2*(l))))
                     controle(l) = 0;
                 else
                     controle(l) = 1;
@@ -625,6 +706,110 @@ classdef Simulations
                    
             deb = k / n;
             p_e_ARQ = vpa(sum(controle(1,:))/N);
+        end
+        
+        function Error_inner_8(type)
+        % INPUT
+         % type ('p' voor p_e_ARQ, 'd' voor debiet)
+         
+            p_e_ARQ_2b_sim = zeros(7,1);
+            p_e_ARQ_2b_ana = zeros(7,1);
+            debiet_sim = zeros(7,1);
+            T_max = [0:6]';
+            for i = 0:size(T_max,1)-1
+               [p_e_ARQ_2b_sim(i+1,1), debiet_sim(i+1,1)] = Simulations.Sim_inner_8(i);
+               p_e_ARQ_2b_ana(i+1,1) = 0.15163^(i+1);
+            end
+            
+            %[["T_max", "p_e_ARQ_ana", "p_e_ARQ_sim", "debiet"]; [T_max,p_e_ARQ_2b_ana,p_e_ARQ_2b_sim, debiet_sim]]
+            
+            hold on
+ 
+            if(type == 'p')
+                t = title('Kans op een decodeerfout, $p_{e}^{ARQ2b}$, in functie van max aantal toegelaten retransmissies, $T_{max}$', 'FontSize', 16);
+                
+                plot_sim = plot(T_max,p_e_ARQ_2b_sim, 'LineWidth', 1, 'Color', 'Red');
+                plot_ana = plot(T_max,p_e_ARQ_2b_ana, 'LineWidth', 2, 'Color', 'Blue');
+                
+                l = legend([plot_ana, plot_sim], '$p_{e}^{ARQ2b}$ analytisch', '$p_{e}^{ARQ2b}$ experimenteel', 'Location', 'northeast');
+                
+                y = ylabel('$p_{e}^{ARQ2b}$', 'FontSize',15);
+                axis([0 6 0 0.20]);
+            elseif(type == 'd')
+                t = title('Informatiedebiet, $\frac{k}{n}$, in functie van max aantal toegelaten retransmissies, $T_{max}$', 'FontSize', 16);
+            
+                plot_deb = plot(T_max,debiet_sim, 'LineWidth', 1, 'Color','Blue');
+
+                l = legend([plot_deb], 'Informatiedebiet $\frac{k}{n}$', 'Location', 'northeast');
+                
+                y = ylabel('$\frac{k}{n}$', 'FontSize',15);
+                axis([0 6 0.09 0.16]);
+            end
+            
+            set(l,'Interpreter','latex')
+            set(t,'Interpreter','latex')
+            
+            x = xlabel('$T_{max}$', 'FontSize',15);
+            set(x,'Interpreter','latex')
+            set(y,'Interpreter','latex')
+                       
+            hold off;
+        end
+        
+        function Error_inner_compare(type)
+            % INPUT
+             % type ('p' voor p_e_ARQ, 'd' voor debiet)
+            
+            p_e_ARQ_1 = zeros(7,1);
+            p_e_ARQ_2a = zeros(7,1);
+            p_e_ARQ_2b = zeros(7,1);
+            
+            deb_a = zeros(7,1);
+            deb_b = zeros(7,1);
+            
+            T_max = [0:6]';
+            
+            for i = 0:size(T_max,1)-1
+               [p_e_ARQ_2a(i+1,1), deb_a(i+1,1)] = Simulations.Sim_inner_5(i);
+               [p_e_ARQ_2b(i+1,1), deb_b(i+1,1)] = Simulations.Sim_inner_8(i);
+               p_e_ARQ_1(i+1,1) = 0.15163^(i+1);
+            end
+            
+            [["T_max", "p_e_ARQ_2a", "p_e_ARQ_2b", "deb_a", "deb_b"]; [T_max,p_e_ARQ_2a,p_e_ARQ_2b, deb_a, deb_b]]
+            
+             hold on
+ 
+            if(type == 'p')
+                t = title('Kans op een decodeerfout, $p_{e}^{ARQ2b}$, in functie van max aantal toegelaten retransmissies, $T_{max}$', 'FontSize', 16);
+                
+                plot_2a = plot(T_max,p_e_ARQ_2a, 'LineWidth', 1, 'Color', 'Blue');
+                plot_2b = plot(T_max,p_e_ARQ_2b, 'LineWidth', 1, 'Color', 'Red');
+                plot_1 = plot(T_max, p_e_ARQ_1, 'LineWidth', 2, 'Color', 'Green');
+                
+                l = legend([plot_1,plot_2a, plot_2b], '$p_{e}^{ARQ}$ analytisch','$p_{e}^{ARQ2a}$ experimenteel', '$p_{e}^{ARQ2b}$ experimenteel', 'Location', 'northeast');
+                
+                y = ylabel('$p_{e}^{ARQ}$', 'FontSize',15);
+                axis([0 6 0 0.20]);
+            elseif(type == 'd')
+                t = title('Informatiedebiet, $\frac{k}{n}$, in functie van max aantal toegelaten retransmissies, $T_{max}$', 'FontSize', 16);
+            
+                plot_deb_a = plot(T_max,deb_a, 'LineWidth', 1, 'Color','Blue');
+                plot_deb_b = plot(T_max,deb_b, 'LineWidth', 1, 'Color','Red');
+
+                l = legend([plot_deb_a, plot_deb_b], 'Informatiedebiet $(\frac{k}{n})^{2a}$', 'Informatiedebiet $(\frac{k}{n})^{2b}$', 'Location', 'northeast');
+                
+                y = ylabel('$\frac{k}{n}$', 'FontSize',15);
+                axis([0 6 0.09 0.37]);
+            end
+            
+            set(l,'Interpreter','latex')
+            set(t,'Interpreter','latex')
+            
+            x = xlabel('$T_{max}$', 'FontSize',15);
+            set(x,'Interpreter','latex')
+            set(y,'Interpreter','latex')
+                       
+            hold off;
         end
     end
 end
