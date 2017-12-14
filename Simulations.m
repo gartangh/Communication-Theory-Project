@@ -92,14 +92,15 @@ classdef Simulations
             
             % benaderde p_m (kans op niet-detecteerbare fout)
             p_m_aprx = 28*p^3;
-            % p_m_aprx = 0;
-            % for i=3:12
-            %    w = i;
-            %    for j = 0:(14-w)
-            %        p_m_aprx = p_m_aprx + codewords_w(i)*p^i*(factorial(14-w)/factorial(14-w-j)/factorial(j)*(-p)^j);
-            %    end
-            % end
-                     
+            %{
+            p_m_aprx = 0;
+            for i=3:12
+                w = i;
+                for j = 0:(14-w)
+                    p_m_aprx = p_m_aprx + codewords_w(i)*p^i*(factorial(14-w)/factorial(14-w-j)/factorial(j)*(-p)^j);
+                end
+            end
+            %}      
             % p_f (kans op decodeerfalen)
             p_f = 0; % alle foutpatronen staan in tabel dus geen sommatie    
             
@@ -248,7 +249,7 @@ classdef Simulations
             % OUTPUT
              % p_e: kans op decodeerfout
 
-            N = 1000; % testgrootte
+            N = 10000; % testgrootte
             
             % random input string
             b = zeros(1,N*10);
@@ -316,8 +317,10 @@ classdef Simulations
             t = title('Kans op een decodeerfout, $p_{e}$, in functie van bitovergangsswaarschijnlijkheid, $p$');
             set(t,'Interpreter','latex')
             
-            xlabel('p', 'FontSize',12);
-            y = ylabel('$p_{e}$', 'FontSize',12);
+            set(gca, 'XScale', 'log');
+            set(gca, 'YScale', 'log');
+            xlabel('p', 'FontSize',15);
+            y = ylabel('$p_{e}$', 'FontSize',15);
             set(y,'Interpreter','latex')
             
             axis([0.001 0.5 0 1]);
@@ -619,7 +622,7 @@ classdef Simulations
             
             p = 0.05; % bitovergangwaarschijnlijkhied
             g_x = [1, 1, 0, 0, 1, 1, 0, 1, 1];
-            N = 2000; % testgrootte
+            N = 2200; % testgrootte
             N_retr = N; % aantal woorden in huidige (re)transmissie
             k = 2 * N; % aantal informatiebits (aantal woorden * 10)
             n = 0; % aantal verzonden bits (minstens aantal woorden * 14)
@@ -705,7 +708,7 @@ classdef Simulations
             end
                    
             deb = k / n;
-            p_e_ARQ = vpa(sum(controle(1,:))/N);
+            p_e_ARQ = vpa(sum(controle(1,:))/N)
         end
         
         function Error_inner_8(type)
@@ -721,7 +724,7 @@ classdef Simulations
                p_e_ARQ_2b_ana(i+1,1) = 0.15163^(i+1);
             end
             
-            %[["T_max", "p_e_ARQ_ana", "p_e_ARQ_sim", "debiet"]; [T_max,p_e_ARQ_2b_ana,p_e_ARQ_2b_sim, debiet_sim]]
+            [["T_max", "p_e_ARQ_ana", "p_e_ARQ_sim", "debiet"]; [T_max,p_e_ARQ_2b_ana,p_e_ARQ_2b_sim, debiet_sim]]
             
             hold on
  
@@ -733,6 +736,7 @@ classdef Simulations
                 
                 l = legend([plot_ana, plot_sim], '$p_{e}^{ARQ2b}$ analytisch', '$p_{e}^{ARQ2b}$ experimenteel', 'Location', 'northeast');
                 
+                set(gca, 'YScale', 'log');
                 y = ylabel('$p_{e}^{ARQ2b}$', 'FontSize',15);
                 axis([0 6 0 0.20]);
             elseif(type == 'd')
