@@ -32,6 +32,7 @@ classdef PHY
                         % dichtsbijzijnde afstand (vanaf linksbeneden, met
                         % de klok mee.)
                         a(j) = (bitstring(2*j-1) - 1/2)*2 * deltaQAM + (bitstring(2*j) - 1/2)*2 * deltaQAM * 1i;
+                        a(j) = 1/sqrt(2) * a(j);
                     end     
                     
                 case '4PAM'
@@ -137,16 +138,17 @@ classdef PHY
                     % 4QAM here
                     for i = 1:length(x)
                         if (real(x(i)) >= 0 && imag(x(i)) >= 0)
-                            a_estim(i) = sqrt(2)*deltaQAM*exp(1*1i*pi/4);
+                            a_estim(i) = 1+j;
                         elseif (real(x(i)) < 0 && imag(x(i)) > 0)
-                            a_estim(i) = sqrt(2)*deltaQAM*exp(3*1i*pi/4);
+                            a_estim(i) = -1 + j;
                         elseif (real(x(i)) <= 0 && imag(x(i)) <= 0)
-                            a_estim(i) = sqrt(2)*deltaQAM*exp(5*1i*pi/4);
+                            a_estim(i) = -1-j;
                         elseif (real(x(i)) > 0 && imag(x(i)) < 0)
-                            a_estim(i) = sqrt(2)*deltaQAM*exp(7*1i*pi/4);
+                            a_estim(i) = 1-j;
                         else
                             error('Incorrecte input');
                         end
+                        a_estim(i) = 1/sqrt(2) * a_estim(i);
                     end
                     
                 case '4PAM'
@@ -155,12 +157,9 @@ classdef PHY
                     deltaPAM = dPAM/2;
                     
                     for i = 1:length(x)
-                        a_estim(i) = round(real(x(i))/deltaPAM/2) * 2;
-                        if (a_estim(i) >= 0)
-                            a_estim(i) = a_estim(1) + 1;
-                        else
-                            a_estim(i) = a_estim(1) - 1;
-                        end
+                        possibilities = [-3*deltaPAM, -deltaPAM, deltaPAM, 3*deltaPAM];
+                        [~, index] = min(abs(possibilities-x(i)));
+                       a_estim(i) = possibilities(index);
                     end
                 
                 otherwise
@@ -178,8 +177,6 @@ classdef PHY
              % u : vector met decisie-variabele.
             
             u = rdown/hch_hat*exp(1i*theta_hat);
-            
-            scatter(real(u),imag(u));
         end
         
         % Functie die symbolen op een puls zet en dit signaal moduleert op een golf.
@@ -201,15 +198,18 @@ classdef PHY
              % Ns/T >= 2(f0+B)
             
             t = -Lf*T:T/Ns:Lf*T;
-            p = pulse(t,T,alpha);
+            p = PHY.pulse(t,T,alpha);
             % optelling uit opgave (2)
-            x = zeros(1,length(t));
+            x = zeros(1,2*Lf*Ns + (length(a)-1)*Ns + 1); 
             for k = 0:length(a)-1
-                x(t/T*Ns+Lf*T) = x(t/T*Ns+Lf*T) + a(k)*p(t/T*Ns+Lf*T - k*T/T*Ns+Lf*T);
+                x(k*Ns + 1 : k*Ns + 2*Lf*Ns + 1) = x(k*Ns + 1 : k*Ns + 2*Lf*Ns + 1) + a(k+1)*p;
             end
             
             % Basisbandkanaal op draaggolf met freqentie frequency
-            s(t/T*Ns+Lf*T) = sqrt(2)*real(x(t/T*Ns+Lf*T)*exp(1i*2*pi*frequency*t*T)); 
+            s = zeros(1, length(x));
+            for k = 1:length(x)
+                s(k) = sqrt(2)*real(x(k) *exp(1j*2*pi*frequency*k*T/Ns));
+            end
         end
         
         function rdemod = demodulate(r,T,Ns,frequency,alpha,Lf,theta)
@@ -225,11 +225,13 @@ classdef PHY
              % rdemod: vector met gedemoduleerde samples.
             
             t = -Lf*T:T/Ns:Lf*T;
-            p = pulse(t,T,alpha);
+            p = PHY.pulse(t,T,alpha);
+            r1 = zeros(1, length(r));
+            for i = 1: length(r)
+                r1(i) = sqrt(2)*r(i)*exp(-1*j*(2*pi*frequency*i*T/Ns + theta));
+            end
             
-            r(t/T*Ns+Lf*T) = sqrt(2)*r(t/T*Ns+Lf*T)*exp(-1i*(2*pi*frequency*t*Ns/T + theta));
-            
-            rdemod = T/Ns * conv(r,p);
+            rdemod = T/Ns * conv(r1,p);
         end
         
         function y = pulse(t,T,alpha)
@@ -267,10 +269,14 @@ classdef PHY
              % rdown: vector met 1 sample per symbool
             
             % Decimeren met factor Ns
-            rdown = decimate(rdemod, Ns);
+            rdemod_trim = rdemod(2*Lf*Ns+1:length(rdemod) - 2*Lf*Ns + 1);
             
-            % Overgangsverschijnsel verwijderen
-            rdown = rdown; % Hier nog formule op toepassen!
+            rdown = [];
+            i = 1;
+            while i < length(rdemod_trim)
+                rdown = [rdown rdemod_trim(i)];
+                i = i + Ns;
+            end
         end   
         
         % Functie die het kanaal simuleert
@@ -281,9 +287,8 @@ classdef PHY
              % sigma : standaard deviatie van de ruis.
             % OUTPUT
              % r : rijvector met samples van de uitgang van het kanaal.
-            
-            nl = sqrt(sigma) * (1/sqrt(2) * (randn(1,lenght(s)) + 1i * randn(1,lenght(s))));
-            r = hch*s + nl;
+
+            r = hch*s + sqrt(sigma)*randn(1, length(s));
         end
     end
 end
