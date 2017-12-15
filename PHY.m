@@ -208,7 +208,7 @@ classdef PHY
             % Basisbandkanaal op draaggolf met freqentie frequency
             s = zeros(1, length(x));
             for k = 1:length(x)
-                s(k) = sqrt(2)*real(x(k) *exp(1j*2*pi*frequency*k*T/Ns));
+                s(k) = sqrt(2)*x(k) *exp(1j*2*pi*frequency*k*T/Ns);
             end
         end
         
