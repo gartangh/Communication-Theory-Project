@@ -55,6 +55,7 @@ classdef Quantization
             SQR=10*log10(var/GKD);
             q = q(:, min_index);
             r = x_0 + (2*[1:M-1] - M)/2 .* Delta_opt;
+
             p = distr(q);
             entropie = -sum(p .* log2(p));
             %{
@@ -71,7 +72,7 @@ classdef Quantization
             hold off
             
             subplot(1,2,2);
-            %}
+            
             pdf = plot(0:255, distr(0:255), 'LineWidth', 2, 'Color', 'Blue');
             hold on
             q_points = stem(q, distr(q), 'r*', 'LineWidth', 2, 'Color', 'Green');
@@ -83,6 +84,7 @@ classdef Quantization
    
             axis([0 255 0 0.016]);
             hold off
+            %}
         end
         
         % Functie om Lloyd-Max kwantisator te bepalen
