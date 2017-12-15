@@ -57,6 +57,7 @@ classdef Quantization
             r = x_0 + (2*[1:M-1] - M)/2 .* Delta_opt;
             p = distr(q);
             entropie = -sum(p .* log2(p));
+            %{
             subplot(1,2,1)
             gkd_plot = plot(Delta, sigma_e_sqr, 'r', 'LineWidth', 1);
             hold on
@@ -68,21 +69,24 @@ classdef Quantization
             ylabel('GKD');
             legend([gkd_plot, gr_plot, ol_plot, min_marker], 'GKD', 'Granulaire bijdrage', 'Overlaadbijdrage', 'Optimale stapgrootte');
             hold off
+            
             subplot(1,2,2);
+            %}
             pdf = plot(0:255, distr(0:255), 'LineWidth', 2, 'Color', 'Blue');
             hold on
-            q_points = stem(q, distr(q), 'r*', 'LineWidth', 3);
-            r_points = stem(r, distr(r), 'g+', 'LineWidth', 3);
+            q_points = stem(q, distr(q), 'r*', 'LineWidth', 2, 'Color', 'Green');
+            r_points = stem(r, distr(r), 'g*', 'LineWidth', 2, 'Color', 'Red');
             xlabel('u');
             ylabel('f_U(u)');
-            legend([pdf, q_points, r_points], 'p.d.f.', 'reconstructieniveaus', 'kwantisatiedrempels');
+            legend([pdf, q_points, r_points], '$f_{U}(u)$', 'reconstructieniveaus', 'kwantisatiedrempels');
             title('Waarschijnlijkheid van reconstructieniveaus en kwantisatiedrempels');
-
+   
+            axis([0 255 0 0.016]);
             hold off
         end
         
         % Functie om Lloyd-Max kwantisator te bepalen
-        function [GKD,SQR,entropie,r,q,p]= Lloyd_max_quantizer()
+        function [GKD,SQR,entropie,r,q,cur_p]= Lloyd_max_quantizer()
             % OUTPUT
              % GKD : GKD Lloyd-Max kwantisator
              % SQR : SQR Lloyd-Max kwantisator
@@ -103,6 +107,7 @@ classdef Quantization
             prev_distortion = 0;
             cur_distortion = 0;
             all_distortions = [];
+            all_entropie = [];
             while true
                 
                 for i = 1:M-1 % update alle kwantisatiedrempels
@@ -116,26 +121,85 @@ classdef Quantization
                         q(i) = teller/noemer;
                     end
                 end
+                
                 prev_distortion = cur_distortion;
                 cur_distortion = 0;
                 for i = 1:M 
                     cur_distortion = cur_distortion + integral(@(u) (q(i) - u).^2.*distr(u), r(i), r(i+1));
                 end
                 all_distortions = [all_distortions cur_distortion];
-                if l>1 && (prev_distortion - cur_distortion)/prev_distortion < EPS
+                
+                cur_p = zeros(1,8);
+                cur_p(1,1) = integral(@(u) distr(u),r(1), r(2));
+                cur_p(1,2) = integral(@(u) distr(u),r(2), r(3));
+                cur_p(1,3) = integral(@(u) distr(u),r(3), r(4));
+                cur_p(1,4) = integral(@(u) distr(u),r(4), r(5));
+                cur_p(1,5) = integral(@(u) distr(u),r(5), r(6));
+                cur_p(1,6) = integral(@(u) distr(u),r(6), r(7));
+                cur_p(1,7) = integral(@(u) distr(u),r(7), r(8));
+                cur_p(1,8) = integral(@(u) distr(u),r(8), r(9));
+                cur_entropie = -sum((cur_p .* log2(cur_p)));
+                all_entropie = [all_entropie cur_entropie];
+                
+                if (l>1 && (prev_distortion - cur_distortion)/prev_distortion < EPS)
                     break
                 end
                 l = l + 1;
             end
             
-            plot(1:l, all_distortions);
-            
             GKD = cur_distortion;
             gem=integral(@(u) u.*distr(u), 0, 255);
             var=integral(@(u) distr(u).*(u-gem).^2, 0, 255);
             SQR = 10*log10(var/GKD);
-            p =  distr(q);
-            entropie =  -sum(p .* log2(p));
+            p = cur_p;
+            entropie =  cur_entropie;
+            
+            %{
+            d_plot = plot(1:l, all_distortions, 'Color', 'Blue');
+            leg = legend([d_plot], 'GKD $\sigma$', 'Location', 'northeast');
+            set(leg,'Interpreter','latex')
+            t = title('GKD, $\sigma_{e}^{2}$, in functie van het aantal iteraties, $l$.', 'FontSize', 16);
+            set(t,'Interpreter','latex');
+            x = xlabel('$l$', 'FontSize',15);
+            set(x,'Interpreter','latex');
+            y = ylabel('$\sigma_{e}^{2}$', 'FontSize',15);
+            set(y,'Interpreter','latex')
+            axis([0 146 35 74]);
+            hold off;
+            %}
+            
+            %{
+            hold on
+            e_plot = plot(1:l, all_entropie, 'Color', 'Blue');
+            ref_plot = plot(1:l, ones(1,l)*3, 'Color', 'Red');
+            leg = legend([e_plot ref_plot], 'entropie, $H$', 'referentie entropie, $H_{ref}$', 'Location', 'northeast');
+            set(leg,'Interpreter','latex')
+            t = title('Entropie, $H$, in functie van het aantal iteraties, $l$.', 'FontSize', 16);
+            set(t,'Interpreter','latex');
+            x = xlabel('$l$', 'FontSize',15);
+            set(x,'Interpreter','latex');
+            y = ylabel('$H$', 'FontSize',15);
+            set(y,'Interpreter','latex')
+            axis([0 146 2 3.2]);
+            hold off;
+            %}
+            
+             % PLOT
+            f_plot = plot(0:255, distr(0:255), 'Color', 'Blue');
+            hold on
+            r_plot = stem(r, distr(r), 'Color', 'Red');
+            q_plot = stem(q, distr(q), 'Color','Green');
+            l = legend([r_plot, q_plot, f_plot], 'kwantisatiedrempels', 'reconstructieniveaus', 'f_{u}(u)', 'Location', 'northeast');
+            set(l,'Interpreter','latex')
+            t = title('Lloyd\textendash Max kwantisator', 'FontSize',16);
+            set(t,'Interpreter','latex')
+            
+            xlabel('u', 'FontSize',15);
+            y = ylabel('$f_{u}(u)$', 'FontSize',15);
+            set(y,'Interpreter','latex')
+            
+            axis([0 255 0 0.016]);
+            hold off;
         end
         
         % Functie om de compansie kwantisator te bepalen
