@@ -6,7 +6,20 @@ alpha = 1;
 theta = pi/16;
 frequency = 3*10^(-6);
 hch = 1;
+
+% Constellation constants
 constellation = 'BPSK';
+m = 2;
+n = 1;
+k = 1;
+snr = 5.4;
+
+%% Calculate sigma
+
+Eb = n/(k*m);
+N0 = Eb/snr;
+sigma = N0*Ns/(2*T);
+disp(sigma);
 
 %% Kwantisatie
 
@@ -18,54 +31,63 @@ constellation = 'BPSK';
 
 % Quantize the figure
 [samples_quantized]= Quantization.quantize(r,q);
-% Show side by side comparison
-%Quantization.show_figures(samples_quantized);
 
+Quantization.show_figures(samples_quantized);
+% Show side by side comparison
 
 %{
 
 MAX van de samples = 188 met 1 na de komma => 1880 => 11 bits per 
 
+
+
 %}
 
+samples_quantized_idx = arrayfun(@(x)find(q==x,1),samples_quantized);
 
-NBITS = 11;
-samples_bits = zeros(1,NBITS*length(samples_quantized));
-for i=0:length(samples_quantized)-1
-    samples_bits(i*NBITS+1:(i+1)*NBITS) = de2bi(uint16(samples_quantized(i+1)*10), 11);
+NBITS = 3;
+samples_bits = zeros(1,NBITS*length(samples_quantized_idx));
+for i=0:length(samples_quantized_idx)-1
+    samples_bits(i*NBITS+1:(i+1)*NBITS) = de2bi(uint16(samples_quantized_idx(i+1))-1, NBITS);
 end
 
 
+%disp(q);
+
 %% Scenario 1
-samples_bits = Channel_Coding.Encode_outer(samples_bits);
-
+samples_bits2 = Channel_Coding.Encode_outer(samples_bits);
+%samples_bits2 = samples_bits;
 %% Scenario 2
-disp('a');
 
-a = PHY.mapper(samples_bits, constellation);
+a = PHY.mapper(samples_bits2, constellation);
 
 mod = PHY.modulate(a,T,Ns,frequency,alpha,Lf);
-signal = PHY.channel(mod, hch, theta);
-demod = PHY.demodulate(mod, T, Ns, frequency, alpha, Lf, theta);
-result = demod(2*Lf*Ns+1:length(demod) - 2*Lf*Ns);
-%plot(result);
-rdown = PHY.downsample(demod, Ns, Lf);
+signal = PHY.channel(mod, hch, sigma);
 
-u = PHY.make_decision_variable(rdown,hch,theta);
+
+demod = PHY.demodulate(signal, T, Ns, frequency, alpha, Lf, theta);
+
+rdown = PHY.downsample(demod, Ns, Lf);
+disp(sum(sign(real(a))~=sign(real(rdown))));
+
+
+u = PHY.make_decision_variable(rdown,hch,0);
 
 estim = PHY.hard_decisions(u, constellation);
-disp('b');
 %disp(length(a)-sum(a==estim));
 
 
 result_bits = PHY.demapper(estim, constellation);
-result = zeros(1, length(result_bits)/NBITS);
 
 
+result_bits2 = Channel_Coding.Decode_outer(result_bits);
+
+result = zeros(1, length(result_bits2)/NBITS);
 for i = 0:length(result)-1
-    result(i+1) = bi2de(result_bits(i*NBITS+1:(i+1)*NBITS))/10.0;
+    result(i+1) = bi2de(result_bits2(i*NBITS+1:(i+1)*NBITS))+1;
 end
-
-result = Channel_Coding.Decode_outer(result);
-
+result = arrayfun(@(i) q(i), result);
 Quantization.show_figures(result);
+
+% Aantal verschillende bits
+disp(sum(result~=samples_quantized));

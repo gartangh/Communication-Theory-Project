@@ -53,10 +53,10 @@ classdef Quantization
             gem=integral(@(u) u.*distr(u), 0, 255);
             var=integral(@(u) distr(u).*(u-gem).^2, 0, 255);
             SQR=10*log10(var/GKD);
-            q = q(:, min_index);
+            q = q(:, min_index)';
             r = x_0 + (2*[1:M-1] - M)/2 .* Delta_opt;
-
-            p = distr(q);
+            r = [0 r 255];
+            p = arrayfun(@(i) integral(@(x) distr(x), r(i), r(i+1)), 1:8);
             entropie = -sum(p .* log2(p));
             %{
             subplot(1,2,1)
@@ -131,15 +131,8 @@ classdef Quantization
                 end
                 all_distortions = [all_distortions cur_distortion];
                 
-                cur_p = zeros(1,8);
-                cur_p(1,1) = integral(@(u) distr(u),r(1), r(2));
-                cur_p(1,2) = integral(@(u) distr(u),r(2), r(3));
-                cur_p(1,3) = integral(@(u) distr(u),r(3), r(4));
-                cur_p(1,4) = integral(@(u) distr(u),r(4), r(5));
-                cur_p(1,5) = integral(@(u) distr(u),r(5), r(6));
-                cur_p(1,6) = integral(@(u) distr(u),r(6), r(7));
-                cur_p(1,7) = integral(@(u) distr(u),r(7), r(8));
-                cur_p(1,8) = integral(@(u) distr(u),r(8), r(9));
+                cur_p = arrayfun(@(i) integral(@(x) distr(x), r(i), r(i+1)), 1:8);
+
                 cur_entropie = -sum((cur_p .* log2(cur_p)));
                 all_entropie = [all_entropie cur_entropie];
                 
@@ -247,7 +240,7 @@ classdef Quantization
             var = integral(@(u) (u - gem).^2.*distr(u),0,255);
             SQR = 10*log10(var/GKD);
             
-            p = distr(q);
+            p = arrayfun(@(i) integral(@(x) distr(x), r(i), r(i+1)), 1:M);
             entropie = - sum (p .* log2(p));
             
             % PLOT
