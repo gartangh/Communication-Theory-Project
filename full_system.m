@@ -4,9 +4,9 @@ T = 1*10^(-6);
 Ns = 8;
 alpha = 1;
 theta = pi/16;
-frequency = 3*10^(-6);
+frequency = 3*10^6;
 hch = 1;
-
+ 
 % Constellation constants
 constellation = 'BPSK';
 m = 2;
@@ -24,24 +24,13 @@ disp(sigma);
 %% Kwantisatie
 
 % Get Lloyd Max data
-%[GKD,SQR,entropie,r,q,p] = Quantization.Lloyd_max_quantizer;
+[GKD,SQR,entropie,r,q,p] = Quantization.Lloyd_max_quantizer;
 % Get linear quantizer data
-[Delta_opt,GKD,SQR,entropie,r,q,p] = Quantization.optimal_linear_quantizer;
+%[Delta_opt,GKD,SQR,entropie,r,q,p] = Quantization.optimal_linear_quantizer;
 
 
 % Quantize the figure
 [samples_quantized]= Quantization.quantize(r,q);
-
-Quantization.show_figures(samples_quantized);
-% Show side by side comparison
-
-%{
-
-MAX van de samples = 188 met 1 na de komma => 1880 => 11 bits per 
-
-
-
-%}
 
 samples_quantized_idx = arrayfun(@(x)find(q==x,1),samples_quantized);
 
@@ -55,11 +44,11 @@ end
 %disp(q);
 
 %% Scenario 1
-samples_bits2 = Channel_Coding.Encode_outer(samples_bits);
+%samples_bits2 = Channel_Coding.Encode_outer(samples_bits);
 %samples_bits2 = samples_bits;
 %% Scenario 2
 
-a = PHY.mapper(samples_bits2, constellation);
+a = PHY.mapper(samples_bits, constellation);
 
 mod = PHY.modulate(a,T,Ns,frequency,alpha,Lf);
 signal = PHY.channel(mod, hch, sigma);
@@ -68,8 +57,6 @@ signal = PHY.channel(mod, hch, sigma);
 demod = PHY.demodulate(signal, T, Ns, frequency, alpha, Lf, theta);
 
 rdown = PHY.downsample(demod, Ns, Lf);
-disp(sum(sign(real(a))~=sign(real(rdown))));
-
 
 u = PHY.make_decision_variable(rdown,hch,0);
 
@@ -80,11 +67,11 @@ estim = PHY.hard_decisions(u, constellation);
 result_bits = PHY.demapper(estim, constellation);
 
 
-result_bits2 = Channel_Coding.Decode_outer(result_bits);
+%result_bits2 = Channel_Coding.Decode_outer(result_bits);
 
-result = zeros(1, length(result_bits2)/NBITS);
+result = zeros(1, length(result_bits)/NBITS);
 for i = 0:length(result)-1
-    result(i+1) = bi2de(result_bits2(i*NBITS+1:(i+1)*NBITS))+1;
+    result(i+1) = bi2de(result_bits(i*NBITS+1:(i+1)*NBITS))+1;
 end
 result = arrayfun(@(i) q(i), result);
 Quantization.show_figures(result);

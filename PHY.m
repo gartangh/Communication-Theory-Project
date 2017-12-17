@@ -127,7 +127,7 @@ classdef PHY
                 case 'BPSK'            
                     % BPSK here
                     for i = 1:length(x)
-                        if real(x(i)) < 0
+                        if x(i) < 0
                             a_estim(i) = -1;
                         else
                             a_estim(i) = 1;
@@ -138,13 +138,13 @@ classdef PHY
                     % 4QAM here
                     for i = 1:length(x)
                         if (real(x(i)) >= 0 && imag(x(i)) >= 0)
-                            a_estim(i) = 1+j;
-                        elseif (real(x(i)) < 0 && imag(x(i)) > 0)
-                            a_estim(i) = -1 + j;
-                        elseif (real(x(i)) <= 0 && imag(x(i)) <= 0)
-                            a_estim(i) = -1-j;
-                        elseif (real(x(i)) > 0 && imag(x(i)) < 0)
-                            a_estim(i) = 1-j;
+                            a_estim(i) = 1+1i;
+                        elseif (real(x(i)) < 0 && imag(x(i)) >= 0)
+                            a_estim(i) = -1 + 1i;
+                        elseif (real(x(i)) < 0 && imag(x(i)) < 0)
+                            a_estim(i) = -1-1i;
+                        elseif (real(x(i)) >= 0 && imag(x(i)) < 0)
+                            a_estim(i) = 1-1i;
                         else
                             error('Incorrecte input');
                         end
@@ -176,7 +176,7 @@ classdef PHY
             % OUTPUT
              % u : vector met decisie-variabele.
             
-            u = rdown/hch_hat*exp(1i*theta_hat);
+            u = rdown/hch_hat*exp(1j*theta_hat);
         end
         
         % Functie die symbolen op een puls zet en dit signaal moduleert op een golf.
@@ -208,7 +208,7 @@ classdef PHY
             % Basisbandkanaal op draaggolf met freqentie frequency
             s = zeros(1, length(x));
             for k = 1:length(x)
-                s(k) = sqrt(2)*x(k) *exp(1j*2*pi*frequency*k*T/Ns);
+                s(k) = sqrt(2)*real((x(k) *exp(1j*2*pi*frequency*k*T/Ns)));
             end
         end
         
@@ -269,7 +269,7 @@ classdef PHY
              % rdown: vector met 1 sample per symbool
             
             % Decimeren met factor Ns
-            rdemod_trim = rdemod(2*Lf*Ns+1:length(rdemod) - 2*Lf*Ns + 1);
+            rdemod_trim = rdemod(2*Lf*Ns:length(rdemod) - 2*Lf*Ns);
             
             rdown = [];
             i = 1;
