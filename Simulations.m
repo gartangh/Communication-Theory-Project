@@ -446,9 +446,9 @@ classdef Simulations
             
             p = 0.05; % bitovergangwaarschijnlijkhied
             g_x = [1, 1, 0, 1, 0, 1];
-            N = 50000; % testgrootte
+            N = 500000; % testgrootte
             N_retr = N; % aantal woorden in huidige (re)transmissie
-            k = 5 * N; % aantal informatiebits (aantal woorden * 10)
+            k = 5 * N; % aantal informatiebits (aantal woorden * 5)
             n = 14 * N; % aantal verzonden bits (minstens aantal woorden * 14)
             T = 0; % aantal retransmissies (minstens 1)
            
@@ -471,7 +471,7 @@ classdef Simulations
                 % bitovergangwaarschijnlijkheid p
                 e = zeros(1, N_retr*14);
                 e(randperm(numel(e), round((14*N_retr)*p))) = 1;
-
+                
                 % modellering transmissie door modulo-2 som van codewoord met 
                 % foutpatroon
                 r = mod(c_o+e,2);
@@ -497,7 +497,7 @@ classdef Simulations
             end
             
             % optellen aantal fouten
-            amount_errors = amount_errors + sum(sum(mod(b_enc - b_dec,2), 2) > 0);
+            amount_errors = amount_errors + sum(sum(mod(b_enc - b_dec,2), 1) > 0);
             p_e_ARQ = amount_errors/N;
             deb = k / n;
         end
@@ -560,9 +560,9 @@ classdef Simulations
             
             p = 0.05; % bitovergangwaarschijnlijkhied
             g_x = [1, 1, 0, 0, 1, 1, 0, 1, 1];
-            N = 50000; % testgrootte
+            N = 500000; % testgrootte
             N_retr = N; % aantal woorden in huidige (re)transmissie
-            k = 2 * N; % aantal informatiebits (aantal woorden * 10)
+            k = 2 * N; % aantal informatiebits (aantal woorden * 2)
             n = 14 * N; % aantal verzonden bits (minstens aantal woorden * 14)
             T = 0; % aantal retransmissies (minstens 1)
            
@@ -600,7 +600,7 @@ classdef Simulations
                 b_dec = [b_dec; b_rec_i((b_err_i(1,:) == 0),:)];
                 b_enc_retr = b_rec_i((b_err_i(1,:) == 1),:) ;
 
-                if(T <= T_max)
+                if(T < T_max)
                     N_retr = sum(b_err_i(1,:)); % N woorden foutief ontvangen dus retransmissie
                     n = n + 14 * N_retr; % per extra woord dat retransmissie vereist 14 bits extra
                     T = T + 1;
@@ -611,7 +611,7 @@ classdef Simulations
             end
             
             % optellen aantal fouten
-            amount_errors = amount_errors + sum(sum(mod(b_enc - b_dec,2), 2) > 0);
+            amount_errors = amount_errors + sum(sum(mod(b_enc - b_dec,2), 1) > 0);
             p_e_ARQ = amount_errors/N;
             deb = k / n;
         end

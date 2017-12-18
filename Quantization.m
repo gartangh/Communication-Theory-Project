@@ -50,6 +50,7 @@ classdef Quantization
              
             [GKD, min_index] = min(sigma_e_sqr(:));
             Delta_opt = Delta(min_index);
+            
             gem=integral(@(u) u.*distr(u), 0, 255);
             var=integral(@(u) distr(u).*(u-gem).^2, 0, 255);
             SQR=10*log10(var/GKD);
@@ -58,7 +59,7 @@ classdef Quantization
             r = [0 r 255];
             p = arrayfun(@(i) integral(@(x) distr(x), r(i), r(i+1)), 1:8);
             entropie = -sum(p .* log2(p));
-            %{
+            
             subplot(1,2,1)
             gkd_plot = plot(Delta, sigma_e_sqr, 'r', 'LineWidth', 1);
             hold on
@@ -84,11 +85,11 @@ classdef Quantization
    
             axis([0 255 0 0.016]);
             hold off
-            %}
+            
         end
         
         % Functie om Lloyd-Max kwantisator te bepalen
-        function [GKD,SQR,entropie,r,q,cur_p]= Lloyd_max_quantizer()
+        function [GKD,SQR,entropie,r,q,p]= Lloyd_max_quantizer()
             % OUTPUT
              % GKD : GKD Lloyd-Max kwantisator
              % SQR : SQR Lloyd-Max kwantisator
@@ -111,7 +112,6 @@ classdef Quantization
             all_distortions = [];
             all_entropie = [];
             while true
-                
                 for i = 1:M-1 % update alle kwantisatiedrempels
                     r(i+1) = (q(i) + q(i+1))/2;
                 end
@@ -241,6 +241,7 @@ classdef Quantization
             SQR = 10*log10(var/GKD);
             
             p = arrayfun(@(i) integral(@(x) distr(x), r(i), r(i+1)), 1:M);
+
             entropie = - sum (p .* log2(p));
             
             % PLOT
