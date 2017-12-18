@@ -22,11 +22,14 @@ frequentie_afgeknot = (0:length(fourier_afgeknot)-1)/T/length(fourier_afgeknot);
 fourier_normaal = fft(s_normaal);
 frequentie_normaal = (0:length(fourier_normaal)-1)/T/length(fourier_normaal);
 
-plot(frequentie_afgeknot,abs(fourier_afgeknot));
+semilogy(frequentie_afgeknot,abs(fourier_afgeknot));
 hold on;
-plot(frequentie_normaal,abs(fourier_normaal));
+semilogy(frequentie_normaal,abs(fourier_normaal));
 hold off;
 xlabel('Frequentie (Hz)');
 ylabel('DFT (genormaliseerd)');
 
+legend('Afgeknot', 'Normaal');
+
+print('images/fourier_cmp','-depsc');
 %% Nu nog een focking uitleg :(

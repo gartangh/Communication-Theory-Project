@@ -82,8 +82,8 @@ classdef PHY
                     bitstring = zeros(1,length(a)*2);
                     
                     for j = 1:length(a)
-                        bitstring(2*j-1) = (real(a(j))+1)/2;
-                        bitstring(2*j) = (imag(a(j))+1)/2;
+                        bitstring(2*j-1) = round((sqrt(2)*real(a(j))+1)/2);
+                        bitstring(2*j) = round((sqrt(2)*imag(a(j))+1)/2);
                     end
                     
                 case '4PAM'
