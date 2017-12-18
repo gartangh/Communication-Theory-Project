@@ -17,7 +17,8 @@ mod = PHY.modulate(a,T,Ns,frequency,alpha,Lf);
 hold off;
 for epsilon = [0 0.1 0.2]
 BER = [];
-for snr = 1:0.2:8
+hch_hat = hch*epsilon + hch;
+for snr = 1:0.4:20
 
     Eb = n/(k*m);
     N0 = Eb/snr;
@@ -30,7 +31,7 @@ for snr = 1:0.2:8
 
     rdown = PHY.downsample(demod, Ns, Lf);
 
-    u = PHY.make_decision_variable(rdown,hch,theta);
+    u = PHY.make_decision_variable(rdown,hch_hat,theta);
 
     estim = PHY.hard_decisions(u, constellation);
 
@@ -41,7 +42,7 @@ for snr = 1:0.2:8
     disp(snr);
 end
 
-semilogy(mag2db(1:0.2:8)/2, BER);
+semilogy(mag2db(1:0.4:20)/2, BER);
 hold on;
 
 end
